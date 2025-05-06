@@ -45,7 +45,7 @@ type MarkMessageReadBody struct {
 }
 
 type PatchEntitiesPayload struct {
-	Entities map[URNString]GraphQLPatchBody `json:"entities,omitempty"`
+	Entities map[URNString]any `json:"entities,omitempty"`
 }
 
 type MarkThreadReadResponse struct {
@@ -67,10 +67,19 @@ func (c *Client) MarkConversationUnread(ctx context.Context, convURNs ...URN) (*
 
 func (c *Client) doMarkConversationRead(ctx context.Context, read bool, convURNs ...URN) (*MarkThreadReadResponse, error) {
 	conversationList := make([]string, len(convURNs))
-	entities := map[URNString]GraphQLPatchBody{}
+	entities := map[URNString]any{}
+	
 	for i, convURN := range convURNs {
 		conversationList[i] = url.QueryEscape(convURN.String())
-		entities[convURN.URNString()] = GraphQLPatchBody{Patch: Patch{Set: MarkMessageReadBody{Read: read}}}
+		
+		// Use map with explicit "$set" key to ensure proper JSON format
+		entities[convURN.URNString()] = map[string]any{
+			"patch": map[string]any{
+				"$set": map[string]bool{
+					"read": read,
+				},
+			},
+		}
 	}
 
 	var result MarkThreadReadResponse

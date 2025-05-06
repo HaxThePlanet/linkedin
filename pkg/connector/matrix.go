@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/rs/zerolog"
 	"maunium.net/go/mautrix/bridgev2"
@@ -45,6 +46,34 @@ func getMediaFilename(content *event.MessageEventContent) (filename string) {
 
 func (l *LinkedInClient) HandleMatrixMessage(ctx context.Context, msg *bridgev2.MatrixMessage) (*bridgev2.MatrixMessageResponse, error) {
 	conversationURN := linkedingo.NewURN(msg.Portal.ID)
+
+	// Check if this is a command
+	if msg.Content.MsgType == event.MsgText {
+		body := strings.TrimSpace(msg.Content.Body)
+		if strings.HasPrefix(body, "!li") {
+			command := strings.TrimSpace(body[len("!li"):])
+
+			// Handle the mark as unread command
+			if command == "unread" {
+				log := zerolog.Ctx(ctx).With().
+					Str("command", "unread").
+					Str("portal_id", string(msg.Portal.ID)).
+					Str("user_id", string(l.userID)).
+					Logger()
+				ctx = log.WithContext(ctx)
+
+				log.Debug().Msg("Marking conversation as unread")
+
+				_, err := l.client.MarkConversationUnread(ctx, conversationURN)
+				if err != nil {
+					return nil, fmt.Errorf("failed to mark conversation as unread: %w", err)
+				}
+
+				// Return empty response to avoid forwarding the command message to LinkedIn
+				return &bridgev2.MatrixMessageResponse{}, nil
+			}
+		}
+	}
 
 	// Handle emotes by adding a "*" and the user's name to the message
 	if msg.Content.MsgType == event.MsgEmote {

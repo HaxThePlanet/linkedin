@@ -1,3 +1,7 @@
+# v0.6.0 (Unreleased)
+
+*   Added support for marking conversations as unread with a new `!li unread` command.
+
 # v0.5.4
 
 **Migrated away from Poetry**. The dependency management was getting very
